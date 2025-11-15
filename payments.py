@@ -12,10 +12,12 @@ def get_public_origin() -> str:
     return os.getenv("PUBLIC_ORIGIN", "http://localhost:3000")
 
 
-def create_stripe_checkout_session(user_id: str, price_cents: int = 499) -> str:
+def create_stripe_checkout_session(user_id: str, price_cents: int = 499, trial_days: int = 7) -> str:
     """Create a Stripe Checkout session and return the session URL.
 
     - `price_cents` is an integer in cents (e.g., 499 → $4.99 USD).
+    - `trial_days` is the free trial period before first charge (default 7 days).
+    - Card is required upfront even during the trial.
     """
     stripe.api_key = os.getenv("STRIPE_SECRET_KEY")
     if not stripe.api_key:
@@ -25,7 +27,7 @@ def create_stripe_checkout_session(user_id: str, price_cents: int = 499) -> str:
     success_url = f"{origin}/?session_id={{CHECKOUT_SESSION_ID}}"
     cancel_url = f"{origin}/?canceled=true"
 
-    # Create a recurring price on-the-fly for a monthly $4.99 subscription.
+    # Create a recurring price on-the-fly for a monthly $4.99 subscription with trial.
     # Note: In production it's better to create a Price in the Stripe dashboard and use its id.
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
@@ -36,7 +38,7 @@ def create_stripe_checkout_session(user_id: str, price_cents: int = 499) -> str:
                     "currency": "usd",
                     "product_data": {"name": "Live Avatar — Premium Access"},
                     "unit_amount": price_cents,
-                    "recurring": {"interval": "month"},
+                    "recurring": {"interval": "month", "trial_period_days": trial_days},
                 },
                 "quantity": 1,
             }

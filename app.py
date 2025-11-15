@@ -235,11 +235,17 @@ def check_premium(user_id: str):
 
 @app.get("/config")
 def get_public_config():
-    """Return non-sensitive public config for the frontend (e.g., PayPal client id).
+    """Return non-sensitive public config for the frontend (e.g., PayPal client id, pricing).
 
     Do NOT return secrets like Stripe secret keys or Gemini keys.
     """
     return {
         "paypalClientId": os.getenv("PAYPAL_CLIENT_ID", ""),
         "publicOrigin": os.getenv("PUBLIC_ORIGIN", "http://localhost:3000"),
+        "pricing": {
+            "monthlyPrice": 4.99,
+            "monthlyPriceFormatted": "$4.99/month",
+            "trialDays": 7,
+            "freeChatsPerDay": 100,
+        },
     }

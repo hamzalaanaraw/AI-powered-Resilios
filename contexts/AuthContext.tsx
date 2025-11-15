@@ -1,10 +1,13 @@
 
 import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User } from '../types';
+import { Language, detectLanguage } from '../i18n';
 
 interface AuthContextType {
   user: User | null;
   isPremium: boolean;
+  language: Language;
+  setLanguage: (lang: Language) => void;
   login: (email: string) => void;
   logout: () => void;
   subscribe: () => void;
@@ -14,6 +17,7 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
+  const [language, setLanguage] = useState<Language>(detectLanguage());
 
   const login = (email: string) => {
     // Only allow Gmail addresses per product decision
@@ -79,10 +83,11 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
     return () => { if (id) clearInterval(id); };
   }, [user]);
 
+
   const isPremium = user ? user.isPremium : false;
 
   return (
-    <AuthContext.Provider value={{ user, isPremium, login, logout, subscribe }}>
+    <AuthContext.Provider value={{ user, isPremium, language, setLanguage, login, logout, subscribe }}>
       {children}
     </AuthContext.Provider>
   );
