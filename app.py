@@ -95,36 +95,29 @@ def call_gemini(prompt: str) -> str:
     try:
         import google.generativeai as genai
         genai.configure(api_key=api_key)
-        # Use a text model; adjust model name per your Google GenAI account
-        model = os.getenv("GEMINI_MODEL", "text-bison-001")
-        resp = genai.generate_text(model=model, prompt=prompt, temperature=0.7)
-        # SDK may return different shapes; attempt to extract text
-        if hasattr(resp, 'text'):
-            return resp.text
-        if isinstance(resp, dict):
-            # Best-effort extraction
-            if 'candidates' in resp and len(resp['candidates'])>0:
-                return resp['candidates'][0].get('output') or resp['candidates'][0].get('text') or str(resp)
-            if 'output' in resp:
-                return resp['output']
-        return str(resp)
-    except Exception:
-        # SDK not available or failed — fall back to REST approach
-        logger.debug('google-generativeai SDK not used or failed; falling back to REST')
+        # Use gemini-2.5-flash model (latest stable)
+        model = genai.GenerativeModel(model_name=os.getenv("GEMINI_MODEL", "gemini-2.5-flash"))
+        response = model.generate_content(prompt)
+        if response and response.text:
+            return response.text
+        return "(No response from Gemini model.)"
+    except Exception as e:
+        logger.exception(f"google-generativeai SDK failed: {e}")
+    
+    # Fallback to REST approach (may not work with newer API versions)
     try:
         import requests
-        url = os.getenv("GEMINI_API_URL") or "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
-        headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
-        payload = {"prompt": {"text": prompt}, "temperature": 0.7}
+        url = os.getenv("GEMINI_API_URL") or "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent"
+        headers = {"Content-Type": "application/json", "x-goog-api-key": api_key}
+        payload = {"contents": [{"parts": [{"text": prompt}]}], "generationConfig": {"temperature": 0.7}}
         resp = requests.post(url, json=payload, headers=headers, timeout=20)
         resp.raise_for_status()
         data = resp.json()
-        if isinstance(data, dict):
-            if "candidates" in data and len(data["candidates"])>0:
-                return data["candidates"][0].get("output", data["candidates"][0].get("text", ""))
-            if "output" in data:
-                return data["output"]
-            return str(data)
+        if isinstance(data, dict) and "candidates" in data and len(data["candidates"]) > 0:
+            candidate = data["candidates"][0]
+            if "content" in candidate and "parts" in candidate["content"] and len(candidate["content"]["parts"]) > 0:
+                return candidate["content"]["parts"][0].get("text", "(No text in response.)")
+        return str(data)
     except Exception as e:
         logger.exception("Gemini call failed")
         return "(Model call failed; try again later.)"

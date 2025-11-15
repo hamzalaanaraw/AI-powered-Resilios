@@ -68,6 +68,10 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       .then(async (res) => {
         if (!res.ok) {
           const txt = await res.text();
+          // If Stripe is not configured, suggest PayPal
+          if (res.status === 501) {
+            throw new Error('Stripe not configured. Please use PayPal to subscribe.');
+          }
           throw new Error(txt || 'Failed to create checkout session');
         }
         const data = await res.json();

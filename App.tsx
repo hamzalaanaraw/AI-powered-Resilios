@@ -14,6 +14,7 @@ import { AuthScreen } from './components/AuthScreen';
 import { SubscriptionModal } from './components/SubscriptionModal';
 import { MapComponent } from './components/MapComponent';
 import { LiveAvatarView } from './components/LiveAvatarView';
+import { ToastProvider } from './contexts/ToastContext';
 
 
 // A simple client-side check for crisis phrases.
