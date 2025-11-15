@@ -10,10 +10,8 @@ export default defineConfig(({ mode }) => {
         host: '0.0.0.0',
       },
       plugins: [react()],
-      define: {
-        'process.env.API_KEY': JSON.stringify(env.GEMINI_API_KEY),
-        'process.env.GEMINI_API_KEY': JSON.stringify(env.GEMINI_API_KEY)
-      },
+      // Do NOT expose server-side API keys into the frontend bundle.
+      // The frontend should call server-side endpoints which hold secrets.
       resolve: {
         alias: {
           '@': path.resolve(__dirname, '.'),

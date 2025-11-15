@@ -1,11 +1,11 @@
 
-import React, { createContext, useState, useContext, ReactNode } from 'react';
+import React, { createContext, useState, useContext, ReactNode, useEffect } from 'react';
 import { User } from '../types';
 
 interface AuthContextType {
   user: User | null;
   isPremium: boolean;
-  login: () => void;
+  login: (email: string) => void;
   logout: () => void;
   subscribe: () => void;
 }
@@ -15,13 +15,25 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
 
-  const login = () => {
-    // In a real app, this would involve a call to Firebase Auth
-    // and then setting the user object from the response.
-    setUser({
-      id: 'demo-user-123',
-      email: 'user@example.com',
-      isPremium: false,
+  const login = (email: string) => {
+    // Only allow Gmail addresses per product decision
+    const normalized = email.trim();
+    const isGmail = normalized.toLowerCase().endsWith('@gmail.com');
+    if (!isGmail) {
+      alert('Please sign in with a Gmail account to continue.');
+      return;
+    }
+    const demoId = `user-${normalized.replace(/[^a-z0-9]/gi, '_')}`;
+    // Query backend for premium status
+    fetch(`/user/${demoId}/premium`).then(async (res) => {
+      if (res.ok) {
+        const data = await res.json();
+        setUser({ id: demoId, email: normalized, isPremium: data.is_premium });
+      } else {
+        setUser({ id: demoId, email: normalized, isPremium: false });
+      }
+    }).catch(() => {
+      setUser({ id: demoId, email: normalized, isPremium: false });
     });
   };
 
@@ -31,13 +43,41 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
   };
 
   const subscribe = () => {
-    // This simulates a successful payment and updates the user's status.
-    // In a real app, this state would be derived from a user's subscription
-    // status in Firestore, updated via a backend webhook.
-    if (user) {
-      setUser({ ...user, isPremium: true });
-    }
+    // Create a checkout session on the server and redirect to Stripe Checkout.
+    if (!user) return;
+    fetch('/create-checkout-session', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ user_id: user.id }),
+    })
+      .then(async (res) => {
+        if (!res.ok) throw new Error('Failed to create checkout session');
+        const data = await res.json();
+        if (data.url) {
+          window.location.href = data.url;
+        }
+      })
+      .catch((err) => {
+        console.error('Checkout error', err);
+        alert('Unable to start checkout. Try again later.');
+      });
   };
+
+  // Poll backend for premium status periodically (in case webhook updates it)
+  useEffect(() => {
+    let id: number | undefined;
+    if (user) {
+      id = window.setInterval(() => {
+        fetch(`/user/${user.id}/premium`).then(async (res) => {
+          if (res.ok) {
+            const data = await res.json();
+            setUser((u) => (u ? { ...u, isPremium: data.is_premium } : u));
+          }
+        }).catch(() => {});
+      }, 5000);
+    }
+    return () => { if (id) clearInterval(id); };
+  }, [user]);
 
   const isPremium = user ? user.isPremium : false;
 

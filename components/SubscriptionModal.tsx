@@ -1,5 +1,6 @@
 
 import React from 'react';
+import PayPalButton from './PayPalButton';
 
 // FIX: Added `onSubscribe` to the props interface to match the usage in App.tsx. This component is now presentational and no longer needs the AuthContext.
 interface SubscriptionModalProps {
@@ -36,14 +37,21 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, o
             </ul>
         </div>
         
-        <button
-          onClick={onSubscribe}
-          className="w-full p-3 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition"
-        >
-          Subscribe Now (Demo)
-        </button>
-         <p className="text-center mt-4 text-xs text-slate-500">
-            This is a simulation. No payment is required.
+        <div className="grid grid-cols-1 gap-3">
+          <button
+            onClick={onSubscribe}
+            className="w-full p-3 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition"
+          >
+            Subscribe Now (Card via Stripe)
+          </button>
+
+          <div className="w-full p-2 bg-white border rounded">
+            <div className="text-sm text-slate-600 mb-2">Or subscribe with PayPal:</div>
+            <PayPalButton hostedButtonId="ZEHMRCDY46HTC" />
+          </div>
+        </div>
+        <p className="text-center mt-4 text-xs text-slate-500">
+           Payments will be processed securely. For testing, use sandbox credentials.
         </p>
       </div>
     </div>
