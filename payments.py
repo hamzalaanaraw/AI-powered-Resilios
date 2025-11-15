@@ -29,6 +29,7 @@ def create_stripe_checkout_session(user_id: str, price_cents: int = 499, trial_d
 
     # Create a recurring price on-the-fly for a monthly $4.99 subscription with trial.
     # Note: In production it's better to create a Price in the Stripe dashboard and use its id.
+    # Ensure we require a card (default Stripe behavior for subscriptions with trial)
     session = stripe.checkout.Session.create(
         payment_method_types=["card"],
         mode="subscription",

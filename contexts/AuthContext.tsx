@@ -18,6 +18,17 @@ const AuthContext = createContext<AuthContextType | undefined>(undefined);
 export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [user, setUser] = useState<User | null>(null);
   const [language, setLanguage] = useState<Language>(detectLanguage());
+  // Persist language selection in localStorage
+  useEffect(() => {
+    const saved = window.localStorage.getItem('resilios_language');
+    if (saved && saved in ({} as any)) {
+      setLanguage(saved as Language);
+    }
+  }, []);
+
+  useEffect(() => {
+    window.localStorage.setItem('resilios_language', language);
+  }, [language]);
 
   const login = (email: string) => {
     // Only allow Gmail addresses per product decision
@@ -55,15 +66,20 @@ export const AuthProvider: React.FC<{ children: ReactNode }> = ({ children }) =>
       body: JSON.stringify({ user_id: user.id }),
     })
       .then(async (res) => {
-        if (!res.ok) throw new Error('Failed to create checkout session');
+        if (!res.ok) {
+          const txt = await res.text();
+          throw new Error(txt || 'Failed to create checkout session');
+        }
         const data = await res.json();
         if (data.url) {
           window.location.href = data.url;
+        } else {
+          throw new Error('No checkout URL returned');
         }
       })
       .catch((err) => {
         console.error('Checkout error', err);
-        alert('Unable to start checkout. Try again later.');
+        alert(`Unable to start checkout: ${err.message || 'Try again later.'}`);
       });
   };
 

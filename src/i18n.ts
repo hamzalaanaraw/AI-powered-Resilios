@@ -386,7 +386,7 @@ export function detectLanguage(): Language {
   }
 
   const browserLang = navigator.language.split('-')[0];
-  if (browserLang in translations) {
+  if (browserLang && Object.prototype.hasOwnProperty.call(translations, browserLang)) {
     return browserLang as Language;
   }
 

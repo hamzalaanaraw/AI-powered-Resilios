@@ -32,6 +32,8 @@ export const AuthScreen: React.FC = () => {
       </div>
 
       <div className="text-center max-w-md">
+        {/* Gemini missing banner */}
+        <ConfigBanner />
         <img src={IMAGES.logo} alt="Resilios Logo" className="w-24 h-24 mx-auto mb-6 rounded-full shadow-lg" />
         <h1 className="text-4xl font-bold text-sky-800">{t('auth.welcome', language)}</h1>
         <p className="mt-4 text-lg text-slate-600">
@@ -94,6 +96,37 @@ export const AuthScreen: React.FC = () => {
         <p className="mt-6 text-xs text-slate-400">
           By continuing you consent to Resilios sending emails to the provided Gmail for account management and optional marketing communications. You can opt out later.
         </p>
+      </div>
+    </div>
+  );
+};
+
+// Small banner component to show if Gemini key is missing
+const ConfigBanner: React.FC = () => {
+  const [config, setConfig] = React.useState<any>(null);
+  React.useEffect(() => {
+    const dismissed = window.localStorage.getItem('resilios_gemini_banner_dismissed');
+    if (dismissed === '1') return;
+    fetch('/config').then((r) => r.json()).then((d) => setConfig(d)).catch(() => {});
+  }, []);
+
+  if (!config) return null;
+  if (config.hasGeminiKey) return null;
+
+  const dismiss = () => {
+    window.localStorage.setItem('resilios_gemini_banner_dismissed', '1');
+    setConfig({ ...config, hidden: true });
+  };
+
+  if (config.hidden) return null;
+
+  return (
+    <div className="mb-4 p-3 rounded-lg bg-yellow-50 border border-yellow-200 text-sm text-yellow-800 flex justify-between items-start">
+      <div>
+        Gemini model key not configured on the server — live avatar and AI replies will show fallback text. Configure `GEMINI_API_KEY` on the backend to enable full functionality.
+      </div>
+      <div className="ml-3">
+        <button onClick={dismiss} className="text-yellow-700 underline text-xs">Dismiss</button>
       </div>
     </div>
   );

@@ -91,29 +91,39 @@ def call_gemini(prompt: str) -> str:
         logger.warning("GEMINI_API_KEY not set — returning fallback reply")
         return "(No Gemini API key configured on server — reply unavailable.)"
 
-    # Server-side call to Google Generative Language REST API (text generation)
-    # This implementation uses the REST endpoint and requires that you set
-    # GEMINI_API_KEY in the environment (do NOT commit the key to the repo).
-    # NOTE: The exact REST path and auth method may vary depending on your
-    # Google GenAI account configuration. Adjust the endpoint and parsing
-    # logic per the GenAI REST API docs for your account.
+    # Prefer the official google-generativeai SDK if available.
+    try:
+        import google.generativeai as genai
+        genai.configure(api_key=api_key)
+        # Use a text model; adjust model name per your Google GenAI account
+        model = os.getenv("GEMINI_MODEL", "text-bison-001")
+        resp = genai.generate_text(model=model, prompt=prompt, temperature=0.7)
+        # SDK may return different shapes; attempt to extract text
+        if hasattr(resp, 'text'):
+            return resp.text
+        if isinstance(resp, dict):
+            # Best-effort extraction
+            if 'candidates' in resp and len(resp['candidates'])>0:
+                return resp['candidates'][0].get('output') or resp['candidates'][0].get('text') or str(resp)
+            if 'output' in resp:
+                return resp['output']
+        return str(resp)
+    except Exception:
+        # SDK not available or failed — fall back to REST approach
+        logger.debug('google-generativeai SDK not used or failed; falling back to REST')
     try:
         import requests
-        # Example endpoint for text generation (may need to be adjusted):
         url = os.getenv("GEMINI_API_URL") or "https://generativelanguage.googleapis.com/v1beta2/models/text-bison-001:generate"
         headers = {"Content-Type": "application/json", "Authorization": f"Bearer {api_key}"}
         payload = {"prompt": {"text": prompt}, "temperature": 0.7}
         resp = requests.post(url, json=payload, headers=headers, timeout=20)
         resp.raise_for_status()
         data = resp.json()
-        # Parse best-effort depending on response shape
         if isinstance(data, dict):
-            # Common shapes: 'candidates' or 'output'
             if "candidates" in data and len(data["candidates"])>0:
                 return data["candidates"][0].get("output", data["candidates"][0].get("text", ""))
             if "output" in data:
                 return data["output"]
-            # Fallback to full text content
             return str(data)
     except Exception as e:
         logger.exception("Gemini call failed")
@@ -165,8 +175,12 @@ class CreateSessionRequest(BaseModel):
 
 @app.post("/create-checkout-session")
 def create_checkout(req: CreateSessionRequest):
+    # If Stripe is not configured, report clearly so frontend can fall back to PayPal
+    if not os.getenv("STRIPE_SECRET_KEY"):
+        raise HTTPException(status_code=501, detail="Stripe not configured on server. Use PayPal instead.")
     try:
-        url = create_stripe_checkout_session(req.user_id)
+        trial_days = int(os.getenv("TRIAL_DAYS", "7"))
+        url = create_stripe_checkout_session(req.user_id, trial_days=trial_days)
         return {"url": url}
     except Exception as e:
         logger.exception("Failed to create Stripe session")
@@ -245,7 +259,9 @@ def get_public_config():
         "pricing": {
             "monthlyPrice": 4.99,
             "monthlyPriceFormatted": "$4.99/month",
-            "trialDays": 7,
-            "freeChatsPerDay": 100,
+            "trialDays": int(os.getenv("TRIAL_DAYS", "7")),
+            "freeChatsPerDay": int(os.getenv("FREE_CHATS_PER_DAY", "100")),
         },
+        "hasGeminiKey": bool(os.getenv("GEMINI_API_KEY")),
+        "hasStripe": bool(os.getenv("STRIPE_SECRET_KEY")),
     }

@@ -20,6 +20,13 @@ const FeatureListItem: React.FC<{ children: React.ReactNode }> = ({ children }) 
 
 export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, onSubscribe }) => {
   const { language } = useAuth();
+  const [config, setConfig] = React.useState<any>(null);
+
+  React.useEffect(() => {
+    fetch('/config').then((r) => r.json()).then((d) => setConfig(d)).catch(() => setConfig(null));
+  }, []);
+
+  const showStripe = config ? !!config.hasStripe : false;
 
   return (
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
@@ -43,12 +50,16 @@ export const SubscriptionModal: React.FC<SubscriptionModalProps> = ({ onClose, o
         </div>
         
         <div className="grid grid-cols-1 gap-3">
-          <button
-            onClick={onSubscribe}
-            className="w-full p-3 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition"
-          >
-            {t('button.startTrial', language)}
-          </button>
+          {showStripe ? (
+            <button
+              onClick={onSubscribe}
+              className="w-full p-3 bg-sky-500 text-white rounded-lg font-semibold hover:bg-sky-600 transition"
+            >
+              {t('button.startTrial', language)}
+            </button>
+          ) : (
+            <div className="w-full p-3 bg-slate-50 rounded text-sm text-slate-600">Stripe is not configured. Use PayPal below to subscribe.</div>
+          )}
 
           <div className="w-full p-2 bg-white border rounded">
             <div className="text-sm text-slate-600 mb-2">Or subscribe with PayPal:</div>
