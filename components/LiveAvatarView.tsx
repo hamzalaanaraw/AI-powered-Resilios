@@ -1,8 +1,8 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
-import { SYSTEM_PROMPT, IMAGES, displaySticker, STICKERS } from '../constants';
+import { GoogleGenAI, LiveSession, LiveServerMessage, Modality } from "@google/genai";
+import { LIVE_SYSTEM_PROMPT, IMAGES, displaySticker, STICKERS } from '../constants';
 import { createBlob, decode, decodeAudioData } from '../utils/audio';
 import { MicrophoneIcon, StopIcon } from './Icons';
-import { useAuth } from '../contexts/AuthContext';
 
 type AvatarState = 'idle' | 'speaking';
 
@@ -12,29 +12,26 @@ export const LiveAvatarView: React.FC = () => {
     const [transcript, setTranscript] = useState('');
     const [sticker, setSticker] = useState<string | null>(null);
 
-    const sessionPromiseRef = useRef<any | null>(null);
+    const sessionPromiseRef = useRef<Promise<LiveSession> | null>(null);
     const mediaStreamRef = useRef<MediaStream | null>(null);
     const audioContextRef = useRef<AudioContext | null>(null);
     const scriptProcessorRef = useRef<ScriptProcessorNode | null>(null);
     const speakingTimeoutRef = useRef<number | null>(null);
     const stickerTimeoutRef = useRef<number | null>(null);
-    const ai = useRef<any | null>(null);
-    const { user, isPremium, subscribe } = useAuth();
+    const ai = useRef<GoogleGenAI | null>(null);
 
     // Refs for the audio visualizer
     const canvasRef = useRef<HTMLCanvasElement | null>(null);
     const analyserRef = useRef<AnalyserNode | null>(null);
     const animationFrameIdRef = useRef<number | null>(null);
     
-    // Do not initialize any client-side API keys here. Live sessions should be
-    // proxied via the server in production. For now, we provide a local
-    // simulated fallback so the UI works without server-side Gemini.
     useEffect(() => {
+        if (process.env.API_KEY) {
+            ai.current = new GoogleGenAI({ apiKey: process.env.API_KEY });
+        }
         return () => {
             // Cleanup on unmount
-            try {
-                sessionPromiseRef.current?.then?.((s: any) => s.close?.());
-            } catch (e) {}
+            sessionPromiseRef.current?.then(session => session.close());
             if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
             if (stickerTimeoutRef.current) clearTimeout(stickerTimeoutRef.current);
             if (animationFrameIdRef.current) cancelAnimationFrame(animationFrameIdRef.current);
@@ -116,11 +113,8 @@ export const LiveAvatarView: React.FC = () => {
     }, []);
 
     const handleToggleSession = useCallback(async () => {
-        // If the user isn't premium, trigger subscribe flow.
-        if (!isPremium) {
-            if (confirm('Live Avatar is a premium feature. Go to checkout?')) {
-                subscribe();
-            }
+        if (!ai.current) {
+            alert("AI service is not available.");
             return;
         }
 
@@ -128,9 +122,10 @@ export const LiveAvatarView: React.FC = () => {
             setIsSessionActive(false);
             setAvatarState('idle');
             setTranscript('');
-            try { mediaStreamRef.current?.getTracks().forEach(track => track.stop()); } catch(e){}
-            try { scriptProcessorRef.current?.disconnect(); } catch(e){}
-            try { audioContextRef.current?.close(); } catch(e){}
+            sessionPromiseRef.current?.then(session => session.close());
+            mediaStreamRef.current?.getTracks().forEach(track => track.stop());
+            scriptProcessorRef.current?.disconnect();
+            audioContextRef.current?.close();
             sessionPromiseRef.current = null;
             if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
             if (stickerTimeoutRef.current) clearTimeout(stickerTimeoutRef.current);
@@ -138,30 +133,108 @@ export const LiveAvatarView: React.FC = () => {
             return;
         }
 
-        // Start a simulated session so the UI works without a configured Gemini key.
         setIsSessionActive(true);
         setTranscript('Connecting...');
 
-        // small simulated delay
-        setTimeout(() => {
-            setTranscript('Hello! I am your Resilios avatar. This is a demo reply.');
-            setAvatarState('speaking');
-            // show a random sticker briefly
-            const keys = Object.keys(STICKERS);
-            const pick = keys[Math.floor(Math.random() * keys.length)];
-            setSticker(pick);
-            if (stickerTimeoutRef.current) clearTimeout(stickerTimeoutRef.current);
-            stickerTimeoutRef.current = window.setTimeout(() => setSticker(null), 3500);
+        const outputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 24000 });
+        
+        const analyser = outputAudioContext.createAnalyser();
+        analyser.fftSize = 256;
+        analyser.smoothingTimeConstant = 0.7;
+        analyser.connect(outputAudioContext.destination);
+        analyserRef.current = analyser;
 
-            // stop speaking after 3s
-            if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
-            speakingTimeoutRef.current = window.setTimeout(() => {
-                setAvatarState('idle');
-                setTranscript('');
-                setIsSessionActive(false);
-            }, 3000);
-        }, 700);
-    }, [isSessionActive, isPremium, subscribe, stopVisualizer]);
+        drawVisualizer();
+        
+        let nextStartTime = 0;
+
+        sessionPromiseRef.current = ai.current.live.connect({
+            model: 'gemini-2.5-flash-native-audio-preview-09-2025',
+            callbacks: {
+                onopen: async () => {
+                    setTranscript('Listening... say something!');
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaStreamRef.current = stream;
+                    const inputAudioContext = new (window.AudioContext || (window as any).webkitAudioContext)({ sampleRate: 16000 });
+                    audioContextRef.current = inputAudioContext;
+                    const source = inputAudioContext.createMediaStreamSource(stream);
+                    const scriptProcessor = inputAudioContext.createScriptProcessor(4096, 1, 1);
+                    scriptProcessorRef.current = scriptProcessor;
+
+                    scriptProcessor.onaudioprocess = (audioProcessingEvent) => {
+                        const inputData = audioProcessingEvent.inputBuffer.getChannelData(0);
+                        const pcmBlob = createBlob(inputData);
+                        sessionPromiseRef.current?.then((session) => {
+                            session.sendRealtimeInput({ media: pcmBlob });
+                        });
+                    };
+                    source.connect(scriptProcessor);
+                    scriptProcessor.connect(inputAudioContext.destination);
+                },
+                onmessage: async (message: LiveServerMessage) => {
+                    if (message.serverContent?.outputTranscription?.text) {
+                        setTranscript(prev => prev + message.serverContent.outputTranscription.text);
+                    }
+                     if (message.serverContent?.turnComplete) {
+                        setTranscript('');
+                    }
+                    
+                    if (message.toolCall?.functionCalls) {
+                        for (const fc of message.toolCall.functionCalls) {
+                            if (fc.name === 'displaySticker' && fc.args.stickerName) {
+                                setSticker(fc.args.stickerName as string);
+                                if (stickerTimeoutRef.current) clearTimeout(stickerTimeoutRef.current);
+                                stickerTimeoutRef.current = window.setTimeout(() => setSticker(null), 4000);
+                            }
+                        }
+                    }
+
+                    const base64Audio = message.serverContent?.modelTurn?.parts[0]?.inlineData?.data;
+                    if (base64Audio) {
+                        setAvatarState('speaking');
+                        if (speakingTimeoutRef.current) clearTimeout(speakingTimeoutRef.current);
+                        
+                        nextStartTime = Math.max(nextStartTime, outputAudioContext.currentTime);
+                        const audioBuffer = await decodeAudioData(decode(base64Audio), outputAudioContext, 24000, 1);
+                        
+                        // Set timeout to return to idle slightly after audio finishes
+                        const audioDurationMs = audioBuffer.duration * 1000;
+                        speakingTimeoutRef.current = window.setTimeout(() => setAvatarState('idle'), audioDurationMs);
+
+                        const source = outputAudioContext.createBufferSource();
+                        source.buffer = audioBuffer;
+                        if(analyserRef.current) {
+                           source.connect(analyserRef.current);
+                        } else {
+                           source.connect(outputAudioContext.destination);
+                        }
+                        source.start(nextStartTime);
+                        nextStartTime += audioBuffer.duration;
+                    }
+                },
+                onerror: (e) => {
+                    console.error('Live session error:', e);
+                    setTranscript('Connection error. Please try again.');
+                    setIsSessionActive(false);
+                    setAvatarState('idle');
+                    stopVisualizer();
+                },
+                onclose: () => {
+                    setIsSessionActive(false);
+                    setAvatarState('idle');
+                    setTranscript('');
+                    stopVisualizer();
+                },
+            },
+            config: {
+                responseModalities: [Modality.AUDIO],
+                outputAudioTranscription: {},
+                systemInstruction: LIVE_SYSTEM_PROMPT,
+                tools: [{functionDeclarations: [displaySticker]}]
+            },
+        });
+
+    }, [isSessionActive, drawVisualizer, stopVisualizer]);
 
     return (
         <div className="h-full w-full flex flex-col items-center justify-center bg-sky-100 p-4">

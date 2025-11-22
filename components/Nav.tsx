@@ -1,6 +1,6 @@
 import React from 'react';
 import { View } from '../types';
-import { AvatarSparkIcon, LockIcon, MapIcon } from './Icons';
+import { AvatarSparkIcon, ChartBarIcon, LockIcon, MapIcon } from './Icons';
 
 interface NavProps {
   activeView: View;
@@ -9,6 +9,9 @@ interface NavProps {
   onLogout: () => void;
   onGoPremium: () => void;
   isPremium: boolean;
+  latestMood: number | null;
+  isNavOpen: boolean;
+  onClose: () => void;
 }
 
 const NavButton: React.FC<{
@@ -64,56 +67,95 @@ const LogoutIcon = () => (
 );
 
 
-export const Nav: React.FC<NavProps> = ({ activeView, setView, onCheckInClick, onLogout, onGoPremium, isPremium }) => {
+export const Nav: React.FC<NavProps> = ({ activeView, setView, onCheckInClick, onLogout, onGoPremium, isPremium, latestMood, isNavOpen, onClose }) => {
+  
+  const getMoodIndicator = (mood: number | null): { emoji: string; label: string; color: string } => {
+    if (mood === null) {
+        return { emoji: '🤔', label: 'Awaiting Check-in', color: 'bg-slate-100 text-slate-600' };
+    }
+    if (mood <= 2) return { emoji: '😔', label: 'Feeling Awful', color: 'bg-red-100 text-red-800' };
+    if (mood <= 4) return { emoji: '😟', label: 'Feeling Bad', color: 'bg-amber-100 text-amber-800' };
+    if (mood <= 6) return { emoji: '😐', label: 'Feeling Okay', color: 'bg-yellow-100 text-yellow-800' };
+    if (mood <= 8) return { emoji: '😊', label: 'Feeling Good', color: 'bg-green-100 text-green-800' };
+    return { emoji: '😄', label: 'Feeling Great', color: 'bg-sky-100 text-sky-800' };
+  };
+
+  const moodIndicator = getMoodIndicator(latestMood);
+
+  const handleAction = (action: () => void) => {
+    action();
+    onClose(); // Always close nav after an action on mobile
+  };
+
+
   return (
-    <nav className="w-full md:w-64 bg-slate-50 border-r border-slate-200 shrink-0 flex flex-col justify-between">
-      <div>
-        <div className="py-4">
-          <NavButton onClick={() => setView('chat')} isActive={activeView === 'chat'} icon={<ChatBubbleIcon />}>
-            AI Chat
-          </NavButton>
-          <NavButton onClick={() => setView('plan')} isActive={activeView === 'plan'} icon={<DocumentTextIcon />}>
-            Wellness Plan
-          </NavButton>
-          <NavButton onClick={() => setView('map')} isActive={activeView === 'map'} icon={<MapIcon />}>
-            Find Support
-          </NavButton>
-          <NavButton 
-            onClick={isPremium ? () => setView('liveAvatar') : onGoPremium} 
-            isActive={activeView === 'liveAvatar'} 
-            icon={isPremium ? <AvatarSparkIcon /> : <LockIcon />}
-            className="relative"
-          >
-            Live Avatar
-            {!isPremium && <span className="absolute right-4 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs font-semibold text-amber-800 bg-amber-200 rounded-full">PRO</span>}
-          </NavButton>
-          <div className="px-4 pt-4 mt-4 border-t border-slate-200">
-               <button
-                  onClick={onCheckInClick}
-                  className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium transition-colors duration-150 bg-sky-500 text-white rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
-              >
-                  <span className="mr-2"><SparklesIcon /></span>
-                  Daily Check-in
-              </button>
-          </div>
-        </div>
-      </div>
-      <div className="py-4 border-t border-slate-200">
-        {!isPremium && (
-            <div className="px-4 mb-4">
+    <>
+      {/* Backdrop for mobile */}
+      <div 
+        className={`fixed inset-0 bg-black bg-opacity-50 z-30 transition-opacity md:hidden ${isNavOpen ? 'opacity-100' : 'opacity-0 pointer-events-none'}`}
+        onClick={onClose}
+        aria-hidden="true"
+      ></div>
+
+      <nav className={`fixed top-0 left-0 h-full w-64 bg-slate-50 border-r border-slate-200 flex flex-col justify-between z-40 transform transition-transform md:static md:translate-x-0 md:h-auto md:shrink-0 ${isNavOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+        <div>
+          <div className="py-4">
+            <NavButton onClick={() => handleAction(() => setView('chat'))} isActive={activeView === 'chat'} icon={<ChatBubbleIcon />}>
+              AI Chat
+            </NavButton>
+            <NavButton onClick={() => handleAction(() => setView('plan'))} isActive={activeView === 'plan'} icon={<DocumentTextIcon />}>
+              Wellness Plan
+            </NavButton>
+            <NavButton onClick={() => handleAction(() => setView('timeChart'))} isActive={activeView === 'timeChart'} icon={<ChartBarIcon />}>
+              Timeline
+            </NavButton>
+            <NavButton onClick={() => handleAction(() => setView('map'))} isActive={activeView === 'map'} icon={<MapIcon />}>
+              Find Support
+            </NavButton>
+            <NavButton 
+              onClick={() => handleAction(isPremium ? () => setView('liveAvatar') : onGoPremium)} 
+              isActive={activeView === 'liveAvatar'} 
+              icon={isPremium ? <AvatarSparkIcon /> : <LockIcon />}
+              className="relative"
+            >
+              Live Avatar
+              {!isPremium && <span className="absolute right-4 top-1/2 -translate-y-1/2 px-1.5 py-0.5 text-xs font-semibold text-amber-800 bg-amber-200 rounded-full">PRO</span>}
+            </NavButton>
+            <div className="px-4 pt-4 mt-4 border-t border-slate-200 space-y-4">
+                 <div className={`p-3 rounded-lg flex items-center ${moodIndicator.color} transition-colors`}>
+                    <span className="text-2xl mr-3">{moodIndicator.emoji}</span>
+                    <div>
+                        <p className="text-xs font-semibold uppercase tracking-wider opacity-70">Current Mood</p>
+                        <p className="font-bold text-sm">{moodIndicator.label}</p>
+                    </div>
+                </div>
                  <button
-                    onClick={onGoPremium}
-                    className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium transition-colors duration-150 bg-amber-400 text-amber-900 rounded-lg hover:bg-amber-500"
+                    onClick={() => handleAction(onCheckInClick)}
+                    className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium transition-colors duration-150 bg-sky-500 text-white rounded-lg hover:bg-sky-600 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-sky-500"
                 >
-                    <span className="mr-2"><StarIcon /></span>
-                    Go Premium
+                    <span className="mr-2"><SparklesIcon /></span>
+                    Daily Check-in
                 </button>
             </div>
-        )}
-         <NavButton onClick={onLogout} icon={<LogoutIcon />}>
-            Logout
-          </NavButton>
-      </div>
-    </nav>
+          </div>
+        </div>
+        <div className="py-4 border-t border-slate-200">
+          {!isPremium && (
+              <div className="px-4 mb-4">
+                   <button
+                      onClick={() => handleAction(onGoPremium)}
+                      className="w-full flex items-center justify-center px-4 py-3 text-sm font-medium transition-colors duration-150 bg-amber-400 text-amber-900 rounded-lg hover:bg-amber-500"
+                  >
+                      <span className="mr-2"><StarIcon /></span>
+                      Go Premium
+                  </button>
+              </div>
+          )}
+           <NavButton onClick={() => handleAction(onLogout)} icon={<LogoutIcon />}>
+              Logout
+            </NavButton>
+        </div>
+      </nav>
+    </>
   );
 };

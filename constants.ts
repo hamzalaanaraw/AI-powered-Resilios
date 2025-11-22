@@ -22,6 +22,8 @@ Context:
 You have access to the user's wellness plan in the context provided. Use this to personalize your response.
 `;
 
+export const LIVE_SYSTEM_PROMPT = `You are Resilios, a warm, empathetic AI companion for mental wellness. Your goal is to be a supportive listener. Keep your responses concise and conversational for this voice chat. You can use the 'displaySticker' function to show emotions.`;
+
 export const CRISIS_TRIGGER_PHRASES: string[] = [
   'suicidal', 'want to die', 'end it', "can't do this anymore", 'kill myself', 'ending my life'
 ];
@@ -60,34 +62,34 @@ export const INITIAL_WELLNESS_PLAN: WellnessPlanData = {
 };
 
 export const IMAGES = {
-  logo: 'https://img.playbook.com/x0jK3g-OYR-f_m2Z7s5E-L9N-t5T-j8_xG0F_XgI_V4/fill/400/400/sm/true/dist/playground/s3:7bd0167c-1798-4c19-9407-3ed2bf753d0e.png',
+  logo: 'https://i.ibb.co/pdsg1yB/The-Resilient-Mind-Community-Logo.png',
   avatar: 'https://img.playbook.com/nJg3-3G1O57nLgM9b4I6iT8M7oX-g9D9yQ5wX5gY_nQ/fill/400/400/sm/true/dist/playground/s3:275988e0-1c64-4458-81bf-811c7694982a.png',
   // Note: These are placeholder videos for the live avatar feature.
   avatarIdle: 'https://storage.googleapis.com/static.aistudio.google.com/meet/demos/resilios_idle.mp4',
   avatarSpeaking: 'https://storage.googleapis.com/static.aistudio.google.com/meet/demos/resilios_speaking.mp4',
 };
 
-// Placeholder stickers using a valid image URL to prevent crashes from malformed base64 data.
-// A real implementation would replace these with the correct base64 strings or URLs for each sticker.
+// A full set of expressive stickers to enhance the user experience.
 export const STICKERS: Record<string, string> = {
     WAVING: 'https://i.ibb.co/L9YxLqG/sticker-waving.png',
     SCARED: 'https://i.ibb.co/k2qgJ7d/sticker-scared.png',
-    COOL: 'https://i.ibb.co/hYSYvC5/sticker-cool.png',
-    SHRUG: 'https://i.ibb.co/hYSYvC5/sticker-shrug.png',
-    CONFUSED: 'https://i.ibb.co/hYSYvC5/sticker-confused.png',
-    LOVE: 'https://i.ibb.co/hYSYvC5/sticker-love.png',
-    SHOCKED: 'https://i.ibb.co/hYSYvC5/sticker-shocked.png',
-    ANGRY: 'https://i.ibb.co/hYSYvC5/sticker-angry.png',
-    SAD: 'https://i.ibb.co/hYSYvC5/sticker-sad.png',
-    NATURE: 'https://i.ibb.co/hYSYvC5/sticker-nature.png',
-    POINTING: 'https://i.ibb.co/hYSYvC5/sticker-pointing.png',
-    THINKING: 'https://i.ibb.co/hYSYvC5/sticker-thinking.png',
-    CELEBRATING: 'https://i.ibb.co/hYSYvC5/sticker-celebrating.png',
-    SIGN: 'https://i.ibb.co/hYSYvC5/sticker-sign.png',
-    WORKING: 'https://i.ibb.co/hYSYvC5/sticker-working.png',
-    READING: 'https://i.ibb.co/hYSYvC5/sticker-reading.png',
-    LISTENING: 'https://i.ibb.co/hYSYvC5/sticker-listening.png',
-    IDEA: 'https://i.ibb.co/hYSYvC5/sticker-idea.png',
+    COOL: 'https://i.ibb.co/wQ5n3wz/sticker-cool.png',
+    SHRUG: 'https://i.ibb.co/RcsYw2y/sticker-shrug.png',
+    CONFUSED: 'https://i.ibb.co/GHYyv7z/sticker-confused.png',
+    LOVE: 'https://i.ibb.co/Wcby7D6/sticker-love.png',
+    SHOCKED: 'https://i.ibb.co/fDbp687/sticker-shocked.png',
+    ANGRY: 'https://i.ibb.co/wYmnw4z/sticker-angry.png',
+    SAD: 'https://i.ibb.co/MfZ8G2R/sticker-sad.png',
+    NATURE: 'https://i.ibb.co/tYHkQ2x/sticker-nature.png',
+    POINTING: 'https://i.ibb.co/6yVzZ63/sticker-pointing.png',
+    THINKING: 'https://i.ibb.co/8N10S8x/sticker-thinking.png',
+    CELEBRATING: 'https://i.ibb.co/wzM0GjM/sticker-celebrating.png',
+    SIGN: 'https://i.ibb.co/gJFkMNK/sticker-sign.png',
+    WORKING: 'https://i.ibb.co/6PqjQ7V/sticker-working.png',
+    READING: 'https://i.ibb.co/2Z5hS5h/sticker-reading.png',
+    LISTENING: 'https://i.ibb.co/pZ4yL0D/sticker-listening.png',
+    IDEA: 'https://i.ibb.co/K24m1h8/sticker-idea.png',
+    STORMY_MOOD: 'https://i.ibb.co/WvYxV8v/image.png',
 };
 
 

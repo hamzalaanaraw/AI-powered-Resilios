@@ -1,10 +1,14 @@
-
-
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
 import { AuthProvider } from './contexts/AuthContext';
-import { ToastProvider } from './contexts/ToastContext';
+
+// Set the API key globally as requested
+(window as any).process = {
+  env: {
+    API_KEY: "AIzaSyBjzZaDPlHrzXh--9tE9JW32kxwXGzTReQ"
+  }
+};
 
 const rootElement = document.getElementById('root');
 if (!rootElement) {
@@ -14,11 +18,8 @@ if (!rootElement) {
 const root = ReactDOM.createRoot(rootElement);
 root.render(
   <React.StrictMode>
-    <ToastProvider>
-      <AuthProvider>
-        <App />
-      </AuthProvider>
-    </ToastProvider>
+    <AuthProvider>
+      <App />
+    </AuthProvider>
   </React.StrictMode>
 );
-

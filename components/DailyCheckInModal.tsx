@@ -1,5 +1,5 @@
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 
 interface DailyCheckInModalProps {
   onClose: () => void;
@@ -17,6 +17,13 @@ const moods = [
 export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({ onClose, onSubmit }) => {
   const [selectedMood, setSelectedMood] = useState<number | null>(null);
   const [notes, setNotes] = useState('');
+  const [isEntering, setIsEntering] = useState(false);
+
+  useEffect(() => {
+    // This triggers the animation on mount
+    const timer = setTimeout(() => setIsEntering(true), 50); // small delay ensures transition is applied
+    return () => clearTimeout(timer);
+  }, []);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -26,8 +33,11 @@ export const DailyCheckInModal: React.FC<DailyCheckInModalProps> = ({ onClose, o
   };
 
   return (
-    <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 p-4">
-      <div className="bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md m-4 transform transition-all">
+    <div className={`fixed inset-0 bg-black flex items-center justify-center z-50 p-4 transition-opacity duration-300 ${isEntering ? 'bg-opacity-50' : 'bg-opacity-0'}`} onClick={onClose}>
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        className={`bg-white rounded-2xl shadow-2xl p-8 w-full max-w-md m-4 transform transition-all duration-300 ease-out ${isEntering ? 'opacity-100 scale-100' : 'opacity-0 scale-95'}`}
+      >
         <div className="flex justify-between items-start">
             <h2 className="text-2xl font-bold text-slate-800 mb-4">How are you feeling?</h2>
             <button onClick={onClose} className="text-slate-400 hover:text-slate-600">

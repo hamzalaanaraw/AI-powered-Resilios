@@ -1,5 +1,5 @@
 {
-  "name": "copy-of-resilios:-ai-mental-wellness-companion",
+  "name": "resilios:-ai-mental-wellness-companion",
   "private": true,
   "version": "0.0.0",
   "type": "module",
@@ -11,7 +11,8 @@
   "dependencies": {
     "@google/genai": "^1.29.1",
     "react": "^19.2.0",
-    "react-dom": "^19.2.0"
+    "react-dom": "^19.2.0",
+    "chart.js": "^4.5.1"
   },
   "devDependencies": {
     "@types/node": "^22.14.0",

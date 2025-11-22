@@ -24,6 +24,7 @@ export interface Message {
   groundingChunks?: GroundingChunk[];
   isLiveTranscription?: boolean;
   sticker?: string;
+  wasDeepThinking?: boolean;
 }
 
 export interface WellnessPlanSection {
@@ -41,7 +42,13 @@ export interface WellnessPlanData {
   journalPrompts: WellnessPlanSection;
 }
 
-export type View = 'chat' | 'plan' | 'map' | 'liveAvatar';
+export interface CheckInData {
+  mood: number;
+  date: Date;
+  notes: string;
+}
+
+export type View = 'chat' | 'plan' | 'map' | 'liveAvatar' | 'timeChart';
 
 export interface User {
   id: string;

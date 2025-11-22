@@ -13,9 +13,9 @@ interface WellnessPlanProps {
 }
 
 const MEDITATION_TRACKS = [
-  { title: 'Peaceful Music', url: 'https://archive.org/download/Peaceful_Meditation_Music/Peaceful%20Meditation%20Music.mp3' },
-  { title: 'Relaxing River', url: 'https://archive.org/download/Relaxing-river-sounds/Relaxing-river-sounds.mp3' },
-  { title: 'Forest Ambience', url: 'https://archive.org/download/forest-ambience/Forest-ambience.mp3' },
+  { title: 'Peaceful Music', url: 'https://cdn.pixabay.com/audio/2022/02/16/audio_19c3b06063.mp3' },
+  { title: 'Relaxing River', url: 'https://cdn.pixabay.com/audio/2023/10/11/audio_a705139401.mp3' },
+  { title: 'Forest Ambience', url: 'https://cdn.pixabay.com/audio/2022/05/27/audio_15dfb7389a.mp3' },
 ];
 
 
